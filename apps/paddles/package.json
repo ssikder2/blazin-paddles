@@ -2,9 +2,9 @@
   "name": "paddles",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3002",
+    "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "next start -p 3002",
+    "start": "next start -p 3000",
     "clean": "git clean -xdf .cache .turbo dist node_modules",
     "typecheck": "tsc --noEmit --emitDeclarationOnly false"
   },
@@ -18,6 +18,13 @@
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "tailwind-merge": "^3.5.0"
+  },
+  "optionalDependencies": {
+    "@next/swc-darwin-arm64": "16.1.6",
+    "@next/swc-darwin-x64": "16.1.6",
+    "@next/swc-linux-arm64-gnu": "16.1.6",
+    "@next/swc-linux-x64-gnu": "16.1.6",
+    "@next/swc-win32-x64-msvc": "16.1.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.2.1",
