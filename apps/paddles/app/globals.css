@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+@source "./**/*.{ts,tsx}";
+@source "../components/**/*.{ts,tsx}";
+@source "../providers/**/*.{ts,tsx}";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+
+  --color-background: #fafafa;
+  --color-foreground: #171717;
+  --color-muted: #f4f4f5;
+  --color-muted-foreground: #71717a;
+  --color-border: #e4e4e7;
+  --color-accent-blue: #2563eb;
+  --color-accent-orange: #ea580c;
+  --color-accent-orange-muted: #fff7ed;
+  --color-accent-green: #16a34a;
+  --color-booked: #e4e4e7;
+  --color-booked-text: #52525b;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-background)] text-[var(--color-foreground)] antialiased;
+  }
+}
