@@ -1,5 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client"
@@ -7,13 +6,22 @@ generator client {
 }
 
 datasource db {
-  provider     = "postgresql"
-  relationMode = "prisma"
+  provider = "postgresql"
 }
 
-// This is a stub model.
-// Delete it and add your own Prisma models.
+/// Template demo table (next-forge starter).
 model Page {
   id   Int    @id @default(autoincrement())
   name String
+}
+
+/// Court reservation window (instant in & out as ISO timestamps in the app).
+model CourtBooking {
+  id        String   @id @default(uuid()) @db.Uuid
+  startAt   DateTime @map("start_at") @db.Timestamptz(6)
+  endAt     DateTime @map("end_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([startAt, endAt])
+  @@map("court_booking")
 }

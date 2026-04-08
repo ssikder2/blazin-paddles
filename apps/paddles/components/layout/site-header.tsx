@@ -13,7 +13,7 @@ const nav = [
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const { user, signInWithGoogle, signOut } = useAuth();
+  const { user, isLoading, signInWithGoogle, signOut } = useAuth();
 
   return (
     <header className="border-[var(--color-border)] border-b bg-white">
@@ -40,8 +40,19 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-3">
-          {user ? (
+          {isLoading ? (
+            <span className="text-[var(--color-muted-foreground)] text-sm">Loading…</span>
+          ) : user ? (
             <>
+              {user.avatarUrl ? (
+                <img
+                  alt=""
+                  className="size-8 rounded-full border border-[var(--color-border)]"
+                  height={32}
+                  src={user.avatarUrl}
+                  width={32}
+                />
+              ) : null}
               <div
                 aria-live="polite"
                 className="rounded-full border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-1 font-medium text-sm tabular-nums"
@@ -51,7 +62,7 @@ export function SiteHeader() {
               </div>
               <button
                 className="text-[var(--color-muted-foreground)] text-sm underline-offset-4 hover:underline"
-                onClick={() => signOut()}
+                onClick={() => void signOut()}
                 type="button"
               >
                 Sign out
@@ -60,7 +71,7 @@ export function SiteHeader() {
           ) : (
             <button
               className="rounded-full bg-[var(--color-accent-orange)] px-4 py-2 font-medium text-sm text-white shadow-sm transition hover:opacity-95"
-              onClick={() => signInWithGoogle()}
+              onClick={() => void signInWithGoogle()}
               type="button"
             >
               Sign in with Google

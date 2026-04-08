@@ -38,12 +38,12 @@ export function BookingPageClient() {
   }, []);
 
   const handleConfirm = useCallback(
-    (payload: { startIso: string; endIso: string; credits: number }) => {
+    async (payload: { startIso: string; endIso: string; credits: number }) => {
       if (!user) {
         return;
       }
       addBooking({ start: payload.startIso, end: payload.endIso });
-      setCredits(user.credits - payload.credits);
+      await setCredits(user.credits - payload.credits);
       setPanelSelection(null);
     },
     [addBooking, setCredits, user]

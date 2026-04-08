@@ -17,7 +17,7 @@ export type PanelSelection = {
 type BookingPanelProps = {
   selection: PanelSelection | null;
   onClose: () => void;
-  onConfirm: (payload: { startIso: string; endIso: string; credits: number }) => void;
+  onConfirm: (payload: { startIso: string; endIso: string; credits: number }) => void | Promise<void>;
 };
 
 export function BookingPanel({ selection, onClose, onConfirm }: BookingPanelProps) {
@@ -98,7 +98,7 @@ export function BookingPanel({ selection, onClose, onConfirm }: BookingPanelProp
             {!user ? (
               <button
                 className="w-full rounded-lg bg-[var(--color-accent-orange)] py-3 font-semibold text-white shadow-sm transition hover:opacity-95"
-                onClick={() => signInWithGoogle()}
+                onClick={() => void signInWithGoogle()}
                 type="button"
               >
                 Sign in with Google
@@ -108,7 +108,7 @@ export function BookingPanel({ selection, onClose, onConfirm }: BookingPanelProp
                 className="w-full rounded-lg bg-[var(--color-accent-orange)] py-3 font-semibold text-white shadow-sm transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={remaining !== null && remaining < 0}
                 onClick={() =>
-                  onConfirm({
+                  void onConfirm({
                     startIso: start.toISOString(),
                     endIso: end.toISOString(),
                     credits,

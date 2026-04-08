@@ -3,7 +3,6 @@
 import { addWeeks, isSameDay } from "date-fns";
 
 import { cn } from "@/lib/cn";
-import { formatDayLabel } from "@/lib/timezone";
 import { getWeekDays } from "@/lib/slots";
 
 type WeekStripProps = {
@@ -55,7 +54,7 @@ export function WeekStrip({ weekStart, onWeekChange }: WeekStripProps) {
               <span className={cn("text-xs", isToday ? "text-white/90" : "text-[var(--color-muted-foreground)]")}>
                 {new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(d)}
               </span>
-              <span className="font-medium tabular-nums">{formatDayLabel(d)}</span>
+              <span className="font-medium tabular-nums">{d.getDate()}</span>
             </div>
           );
         })}
