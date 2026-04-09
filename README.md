@@ -1,139 +1,118 @@
-# ▲ / next-forge
+# Blazin' Paddles
 
-**Production-grade Turborepo template for Next.js apps.**
+A full-stack court booking web application for a padel facility. Users can browse real-time court availability, drag to select a time range, and confirm reservations using a credit-based system — no phone calls or emails needed.
 
-<div>
-  <img src="https://img.shields.io/npm/dy/next-forge" alt="" />
-  <img src="https://img.shields.io/npm/v/next-forge" alt="" />
-  <img src="https://img.shields.io/github/license/vercel/next-forge" alt="" />
-</div>
+**Live:** [blazin-paddles-ik3mff2nx-ssikder2s-projects.vercel.app/book](https://blazin-paddles-ik3mff2nx-ssikder2s-projects.vercel.app/book) · [apps/paddles docs](./apps/paddles/README.md)
 
-## Overview
+---
 
-[next-forge](https://github.com/vercel/next-forge) is a production-grade [Turborepo](https://turborepo.com) template for [Next.js](https://nextjs.org/) apps. It's designed to be a comprehensive starting point for building SaaS applications, providing a solid, opinionated foundation with minimal configuration required.
+## What I Built
 
-Built on a decade of experience building web applications, next-forge balances speed and quality to help you ship thoroughly-built products faster.
+Blazin' Paddles is a court reservation platform with the following capabilities:
 
-### Philosophy
+- **Interactive weekly calendar** — drag across any open slot to select a booking window; booked slots are visually blocked for all users in real time
+- **Credit-based booking system** — 1 credit per 30-minute slot; users start with 10 credits and see their balance update after each booking
+- **Google OAuth sign-in** — powered by Supabase Auth; guests can view availability but must sign in to book
+- **Database-backed persistence** — bookings are stored in PostgreSQL and survive refreshes, logouts, and device changes
+- **Overlap prevention** — enforced at the database level with a PostgreSQL exclusion constraint (no two bookings can overlap)
+- **Atomic credit deduction** — a PostgreSQL RPC function deducts credits and rejects the request if balance is insufficient, preventing race conditions
+- **My sessions page** — signed-in users see their upcoming bookings and remaining credit balance
+- **Deployed to Vercel** — continuous deployment from GitHub with per-app Vercel projects in a monorepo
 
-next-forge is built around five core principles:
+---
 
-- **Fast** — Quick to build, run, deploy, and iterate on
-- **Cheap** — Free to start with services that scale with you
-- **Opinionated** — Integrated tooling designed to work together
-- **Modern** — Latest stable features with healthy community support
-- **Safe** — End-to-end type safety and robust security posture
+## Tech Stack
 
-## Demo
+| Area | Technology |
+|---|---|
+| Framework | [Next.js 16](https://nextjs.org) — App Router, server components, server actions |
+| Language | TypeScript (strict) |
+| Styling | Tailwind CSS v4 |
+| Auth | [Supabase Auth](https://supabase.com/auth) — Google OAuth, server-side session handling |
+| Database | PostgreSQL via [Supabase](https://supabase.com) — RLS policies, triggers, RPC functions |
+| Deployment | [Vercel](https://vercel.com) |
+| Monorepo | [Turborepo](https://turborepo.com) + npm workspaces |
+| Observability | Sentry (optional), BetterStack |
 
-Experience next-forge in action:
+---
 
-- [Web](https://demo.next-forge.com) — Marketing website
-- [App](https://app.demo.next-forge.com) — Main application
-- [Storybook](https://storybook.demo.next-forge.com) — Component library
-- [API](https://api.demo.next-forge.com/health) — API health check
+## Project Structure
 
-## Features
+This is a Turborepo monorepo. The main application lives in `apps/paddles`.
 
-next-forge comes with batteries included:
+```
+blazin-paddles/
+├── apps/
+│   ├── paddles/          # The court booking app (main product)
+│   ├── api/              # Serverless API app
+│   ├── app/              # Auth-gated Next.js app (next-forge base)
+│   └── web/              # Marketing site (next-forge base)
+└── packages/
+    ├── database/         # Prisma schema + compiled DB client
+    ├── auth/             # Auth keys and shared config
+    ├── next-config/      # Shared Next.js config
+    ├── observability/    # Sentry + BetterStack integration
+    └── design-system/    # Shared UI components
+```
 
-### Apps
+See [apps/paddles/README.md](./apps/paddles/README.md) for the full breakdown of the booking app.
 
-- **Web** — Marketing site built with Tailwind CSS and TWBlocks
-- **App** — Main application with authentication and database integration
-- **API** — RESTful API with health checks and monitoring
-- **Docs** — Documentation site powered by Mintlify
-- **Email** — Email templates with React Email
-- **Storybook** — Component development environment
+---
 
-### Packages
+## Architecture Decisions
 
-- **Authentication** — Powered by [Clerk](https://clerk.com)
-- **Database** — Type-safe ORM with migrations
-- **Design System** — Comprehensive component library with dark mode
-- **Payments** — Subscription management via [Stripe](https://stripe.com)
-- **Email** — Transactional emails via [Resend](https://resend.com)
-- **Analytics** — Web ([Google Analytics](https://developers.google.com/analytics)) and product ([Posthog](https://posthog.com))
-- **Observability** — Error tracking ([Sentry](https://sentry.io)), logging, and uptime monitoring ([BetterStack](https://betterstack.com))
-- **Security** — Application security ([Arcjet](https://arcjet.com)), rate limiting, and secure headers
-- **CMS** — Type-safe content management for blogs and documentation
-- **SEO** — Metadata management, sitemaps, and JSON-LD
-- **AI** — AI integration utilities
-- **Webhooks** — Inbound and outbound webhook handling
-- **Collaboration** — Real-time features with avatars and live cursors
-- **Feature Flags** — Feature flag management
-- **Cron** — Scheduled job management
-- **Storage** — File upload and management
-- **Internationalization** — Multi-language support
-- **Notifications** — In-app notification system
+**Monorepo with Turborepo** — shared packages (database client, Next.js config, environment validation) are built once and consumed by multiple apps. Turborepo caches build outputs so only affected packages rebuild on each push.
+
+**Supabase for auth + database** — the same Supabase project handles Google OAuth session management and the PostgreSQL database. Row Level Security policies enforce authorization at the data layer so the API never has to manually filter by user.
+
+**Database-level overlap prevention** — instead of checking for conflicts in application code, a PostgreSQL `EXCLUDE USING GIST` constraint makes it physically impossible for two overlapping bookings to coexist. This works even under concurrent requests.
+
+**Atomic credit deduction via RPC** — the `consume_credits` Postgres function runs inside a transaction. If the user doesn't have enough credits, the function raises an exception before making any changes. This prevents partial updates without needing application-level locking.
+
+**Compiled database package** — the `@repo/database` package is compiled to JavaScript (`dist/`) after Prisma generates its client. This avoids Turbopack/webpack resolution issues with Prisma's generated `.ts` → `.js` imports in a monorepo context.
+
+---
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js 20+
-- [Bun](https://bun.sh) (or npm/yarn/pnpm)
-- [Stripe CLI](https://docs.stripe.com/stripe-cli) for local webhook testing
+- A [Supabase](https://supabase.com) project with Google OAuth enabled
 
-### Installation
+### Install dependencies
 
-Create a new next-forge project:
-
-```sh
-npx next-forge@latest init
+```bash
+npm install
 ```
 
-### Setup
+### Set up environment variables
 
-1. Configure your environment variables
-2. Set up required service accounts (Clerk, Stripe, Resend, etc.)
-3. Run the development server
+Copy the example and fill in your Supabase credentials:
 
-For detailed setup instructions, read the [documentation](https://www.next-forge.com/docs).
-
-## Structure
-
-next-forge uses a monorepo structure managed by Turborepo:
-
-```
-next-forge/
-├── apps/           # Deployable applications
-│   ├── web/        # Marketing website (port 3001)
-│   ├── app/        # Main application (port 3000)
-│   ├── api/        # API server
-│   ├── docs/       # Documentation
-│   ├── email/      # Email templates
-│   └── storybook/  # Component library
-└── packages/       # Shared packages
-    ├── design-system/
-    ├── database/
-    ├── auth/
-    └── ...
+```bash
+cp apps/paddles/.env.example apps/paddles/.env.local
 ```
 
-Each app is self-contained and independently deployable. Packages are shared across apps for consistency and maintainability.
+### Run the database migrations
 
-## Documentation
+Run each migration in order in the Supabase SQL editor:
 
-Full documentation is available at [next-forge.com/docs](https://www.next-forge.com/docs), including:
+```
+apps/paddles/supabase/migrations/001_profiles.sql
+apps/paddles/supabase/migrations/002_credit_rpc.sql
+apps/paddles/supabase/migrations/003_court_bookings.sql
+```
 
-- Detailed setup guides
-- Package documentation
-- Migration guides for swapping providers
-- Deployment instructions
-- Examples and recipes
+### Start the dev server
 
-## Contributing
+```bash
+npm run dev --workspace=paddles
+```
 
-We welcome contributions! See the [contributing guide](https://github.com/vercel/next-forge/blob/main/.github/CONTRIBUTING.md) for details.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Contributors
-
-<a href="https://github.com/vercel/next-forge/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=vercel/next-forge" />
-</a>
-
-Made with [contrib.rocks](https://contrib.rocks).
+---
 
 ## License
 
