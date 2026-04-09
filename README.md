@@ -2,7 +2,7 @@
 
 A full-stack court booking web application for a padel facility. Users can browse real-time court availability, drag to select a time range, and confirm reservations using a credit-based system — no phone calls or emails needed.
 
-**Live:** [blazin-paddles-ik3mff2nx-ssikder2s-projects.vercel.app/book](https://blazin-paddles-ik3mff2nx-ssikder2s-projects.vercel.app/book) · [apps/paddles docs](./apps/paddles/README.md)
+**Live:** [blazin-paddles-chi.vercel.app](https://blazin-paddles-chi.vercel.app) · [apps/paddles docs](./apps/paddles/README.md)
 
 ---
 

@@ -1,6 +1,6 @@
 # Blazin' Paddles
 
-**Live:** [blazin-paddles-ik3mff2nx-ssikder2s-projects.vercel.app/book](https://blazin-paddles-ik3mff2nx-ssikder2s-projects.vercel.app/book)
+**Live:** [blazin-paddles-chi.vercel.app](https://blazin-paddles-chi.vercel.app)
 
 A full-stack court booking web app for a single-venue padel facility. Users can browse real-time court availability, drag to select a time slot, and confirm bookings using a credit-based system — all without needing to call or email.
 
