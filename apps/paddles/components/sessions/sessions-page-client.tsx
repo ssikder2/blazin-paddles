@@ -96,7 +96,7 @@ export function SessionsPageClient() {
               {budget} credit budget
             </div>
             <div className="rounded-lg border border-[var(--color-border)] bg-white px-4 py-3 text-sm">
-              {used.toFixed(1)} credits used
+              {used} credits used
             </div>
             <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-accent-orange-muted)] px-4 py-3 font-medium text-sm">
               {remain} credits remain
