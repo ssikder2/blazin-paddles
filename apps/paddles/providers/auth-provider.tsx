@@ -28,6 +28,8 @@ type AuthContextValue = {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   setCredits: (next: number) => Promise<void>;
+  /** Updates in-memory credits after a server-side change (e.g. consume_credits RPC). */
+  patchCredits: (next: number) => void;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -117,6 +119,11 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
     await supabase.auth.signOut();
   }, []);
 
+  const patchCredits = useCallback((next: number) => {
+    const clamped = Math.max(0, next);
+    setUser((u) => (u ? { ...u, credits: clamped } : null));
+  }, []);
+
   const setCredits = useCallback(async (next: number) => {
     const supabase = createClient();
     const clamped = Math.max(0, next);
@@ -147,8 +154,9 @@ export function AuthProvider({ children }: { readonly children: ReactNode }) {
       signInWithGoogle,
       signOut,
       setCredits,
+      patchCredits,
     }),
-    [user, isLoading, signInWithGoogle, signOut, setCredits]
+    [user, isLoading, signInWithGoogle, signOut, setCredits, patchCredits]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

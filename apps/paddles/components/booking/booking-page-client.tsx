@@ -2,27 +2,31 @@
 
 import { startOfWeek } from "date-fns";
 import { useCallback, useMemo, useState } from "react";
-
 import { BookingPanel } from "@/components/booking/booking-panel";
 import { TimeGrid } from "@/components/booking/time-grid";
 import { WeekStrip } from "@/components/booking/week-strip";
+import { consumeCredits } from "@/lib/profile";
+import { createClient } from "@/lib/supabase/client";
 import { useUserTimeZone } from "@/lib/timezone";
 import { useAuth } from "@/providers/auth-provider";
 import { useBookings } from "@/providers/bookings-provider";
 
 export function BookingPageClient() {
   const tz = useUserTimeZone();
-  const { user, setCredits } = useAuth();
+  const { user, patchCredits } = useAuth();
   const { bookings, addBooking } = useBookings();
 
   const [weekAnchor, setWeekAnchor] = useState(() => new Date());
-  const weekStart = useMemo(() => startOfWeek(weekAnchor, { weekStartsOn: 0 }), [weekAnchor]);
-
+  const weekStart = useMemo(
+    () => startOfWeek(weekAnchor, { weekStartsOn: 0 }),
+    [weekAnchor]
+  );
   const [panelSelection, setPanelSelection] = useState<{
     dayIndex: number;
     startSlot: number;
     endSlot: number;
   } | null>(null);
+  const [confirmError, setConfirmError] = useState<string | null>(null);
 
   const previewSelection = panelSelection;
 
@@ -35,6 +39,11 @@ export function BookingPageClient() {
 
   const closePanel = useCallback(() => {
     setPanelSelection(null);
+    setConfirmError(null);
+  }, []);
+
+  const handleWeekChange = useCallback((next: Date) => {
+    setWeekAnchor(next);
   }, []);
 
   const handleConfirm = useCallback(
@@ -42,11 +51,26 @@ export function BookingPageClient() {
       if (!user) {
         return;
       }
-      addBooking({ start: payload.startIso, end: payload.endIso });
-      await setCredits(user.credits - payload.credits);
+      setConfirmError(null);
+      const supabase = createClient();
+      const result = await consumeCredits(supabase, payload.credits);
+      if (!result.ok) {
+        setConfirmError(
+          result.code === "insufficient"
+            ? "Not enough credits for this booking."
+            : result.message
+        );
+        return;
+      }
+      addBooking({
+        start: payload.startIso,
+        end: payload.endIso,
+        bookedByUserId: user.id,
+      });
+      patchCredits(result.balance);
       setPanelSelection(null);
     },
-    [addBooking, setCredits, user]
+    [addBooking, patchCredits, user]
   );
 
   return (
@@ -55,20 +79,18 @@ export function BookingPageClient() {
         Court availability
       </h1>
       <p className="mb-6 text-center text-[var(--color-muted-foreground)] text-sm">
-        Drag across a column to choose a length. Click any open slot to start. Times shown in{" "}
-        <span className="font-medium text-foreground">{tz}</span>.
+        Drag across a column to choose a length. Click any open slot to start.
+        Times shown in <span className="font-medium text-foreground">{tz}</span>
+        .
       </p>
 
-      <div className="mb-6 rounded-lg border border-[var(--color-border)] border-dashed bg-white px-4 py-3 text-[var(--color-muted-foreground)] text-sm">
-        Filter (coming soon): search by week number or jump to a date.
-      </div>
-
       <div className="mb-8">
-        <WeekStrip onWeekChange={(d) => setWeekAnchor(d)} weekStart={weekStart} />
+        <WeekStrip onWeekChange={handleWeekChange} weekStart={weekStart} />
       </div>
 
       <TimeGrid
         bookings={bookings}
+        currentUserId={user?.id ?? null}
         onCommitRange={handleCommitRange}
         onInvalidRange={() => setPanelSelection(null)}
         previewSelection={previewSelection}
@@ -76,17 +98,15 @@ export function BookingPageClient() {
       />
 
       <p className="mt-4 text-center text-[var(--color-muted-foreground)] text-sm">
-        Click and drag on an open slot to open the booking panel. Booked slots cannot be selected.
+        Click and drag on an open slot to open the booking panel. Booked slots
+        cannot be selected.
       </p>
 
       <BookingPanel
+        confirmError={confirmError}
         onClose={closePanel}
         onConfirm={handleConfirm}
-        selection={
-          panelSelection
-            ? { weekStart, ...panelSelection }
-            : null
-        }
+        selection={panelSelection ? { weekStart, ...panelSelection } : null}
       />
     </div>
   );

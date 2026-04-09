@@ -2,9 +2,46 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { cn } from "@/lib/cn";
-import { useAuth } from "@/providers/auth-provider";
+import { type AuthUser, useAuth } from "@/providers/auth-provider";
+
+function userInitial(user: AuthUser): string {
+  const raw = user.name?.trim() || user.email?.trim() || "?";
+  return raw.charAt(0).toUpperCase();
+}
+
+function UserAvatar({ user }: { readonly user: AuthUser }) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [user.avatarUrl, user.id]);
+
+  if (!user.avatarUrl || failed) {
+    return (
+      <div
+        aria-hidden
+        className="flex size-8 shrink-0 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-muted)] font-semibold text-foreground text-xs"
+      >
+        {userInitial(user)}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      alt=""
+      className="size-8 shrink-0 rounded-full border border-[var(--color-border)] object-cover"
+      height={32}
+      onError={() => setFailed(true)}
+      referrerPolicy="no-referrer"
+      src={user.avatarUrl}
+      width={32}
+    />
+  );
+}
 
 const nav = [
   { href: "/book", label: "Book a Court" },
@@ -44,15 +81,7 @@ export function SiteHeader() {
             <span className="text-[var(--color-muted-foreground)] text-sm">Loading…</span>
           ) : user ? (
             <>
-              {user.avatarUrl ? (
-                <img
-                  alt=""
-                  className="size-8 rounded-full border border-[var(--color-border)]"
-                  height={32}
-                  src={user.avatarUrl}
-                  width={32}
-                />
-              ) : null}
+              <UserAvatar user={user} />
               <div
                 aria-live="polite"
                 className="rounded-full border border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-1 font-medium text-sm tabular-nums"

@@ -1,38 +1,60 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { isSameDay } from "date-fns";
+import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 
-import { isSlotBooked, rangeTouchesBooked } from "@/lib/booking-helpers";
+import { getDaySlotSegments, rangeTouchesBooked } from "@/lib/booking-helpers";
 import { cn } from "@/lib/cn";
-import { formatTimeShort } from "@/lib/timezone";
 import { getSlotBounds, getWeekDays, SLOT_COUNT } from "@/lib/slots";
+import { formatTimeShort } from "@/lib/timezone";
 import type { CourtBooking } from "@/types/booking";
 
-type DragState = {
-  dayIndex: number;
-  startSlot: number;
-  endSlot: number;
-};
+const SLOT_REM = 2;
 
-type TimeGridProps = {
-  weekStart: Date;
+/** Fits typical locale times on one line (whitespace-nowrap) without excess gutter */
+const TIME_COL_CLASS = "w-[5.25rem] min-w-[5.25rem] shrink-0";
+
+interface DragState {
+  dayIndex: number;
+  endSlot: number;
+  startSlot: number;
+}
+
+interface TimeGridProps {
   bookings: CourtBooking[];
-  previewSelection: { dayIndex: number; startSlot: number; endSlot: number } | null;
-  onCommitRange: (payload: { dayIndex: number; startSlot: number; endSlot: number }) => void;
+  currentUserId: string | null;
+  onCommitRange: (payload: {
+    dayIndex: number;
+    startSlot: number;
+    endSlot: number;
+  }) => void;
   onInvalidRange?: () => void;
-};
+  previewSelection: {
+    dayIndex: number;
+    startSlot: number;
+    endSlot: number;
+  } | null;
+  weekStart: Date;
+}
 
 export function TimeGrid({
   weekStart,
   bookings,
+  currentUserId,
   previewSelection,
   onCommitRange,
   onInvalidRange,
 }: TimeGridProps) {
   const days = getWeekDays(weekStart);
+  const today = new Date();
   const [drag, setDrag] = useState<DragState | null>(null);
   const dragRef = useRef<DragState | null>(null);
   const pointerUpRef = useRef<(() => void) | null>(null);
+
+  const segmentsByDay = useMemo(
+    () => days.map((d) => getDaySlotSegments(d, bookings)),
+    [bookings, days]
+  );
 
   const commitDrag = useCallback(() => {
     const current = dragRef.current;
@@ -60,7 +82,11 @@ export function TimeGrid({
         window.removeEventListener("pointerup", pointerUpRef.current);
         pointerUpRef.current = null;
       }
-      const next: DragState = { dayIndex, startSlot: slotIndex, endSlot: slotIndex };
+      const next: DragState = {
+        dayIndex,
+        startSlot: slotIndex,
+        endSlot: slotIndex,
+      };
       dragRef.current = next;
       setDrag(next);
 
@@ -75,16 +101,19 @@ export function TimeGrid({
     [commitDrag]
   );
 
-  const handlePointerEnter = useCallback((dayIndex: number, slotIndex: number) => {
-    setDrag((prev) => {
-      if (!prev || prev.dayIndex !== dayIndex) {
-        return prev;
-      }
-      const next = { ...prev, endSlot: slotIndex };
-      dragRef.current = next;
-      return next;
-    });
-  }, []);
+  const handlePointerEnter = useCallback(
+    (dayIndex: number, slotIndex: number) => {
+      setDrag((prev) => {
+        if (!prev || prev.dayIndex !== dayIndex) {
+          return prev;
+        }
+        const next = { ...prev, endSlot: slotIndex };
+        dragRef.current = next;
+        return next;
+      });
+    },
+    []
+  );
 
   const activeHighlight = drag ?? previewSelection;
 
@@ -99,55 +128,140 @@ export function TimeGrid({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-white shadow-sm">
-      <div
-        className="grid min-w-[720px]"
-        style={{
-          gridTemplateColumns: `4.5rem repeat(7, minmax(0, 1fr))`,
-        }}
-      >
-        <div className="sticky left-0 z-20 border-[var(--color-border)] border-b bg-white p-2" />
-        {days.map((d) => (
+      <div className="flex min-w-[720px] flex-col">
+        <div className="flex border-[var(--color-border)] border-b bg-white">
           <div
-            className="border-[var(--color-border)] border-b border-l p-2 text-center font-medium text-sm"
-            key={d.toISOString()}
-          >
-            {new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(d)}
-          </div>
-        ))}
-
-        {Array.from({ length: SLOT_COUNT }, (_, slotIndex) => (
-          <div className="contents" key={`row-${slotIndex}`}>
-            <div className="sticky left-0 z-10 border-[var(--color-border)] border-b bg-[var(--color-muted)] px-2 py-0 text-right text-[var(--color-muted-foreground)] text-xs leading-[2rem] tabular-nums">
-              {formatTimeShort(getSlotBounds(days[0], slotIndex).start)}
-            </div>
-            {days.map((day, dayIndex) => {
-              const booked = isSlotBooked(day, slotIndex, bookings);
-              const highlighted = isInHighlight(dayIndex, slotIndex);
-
+            className={cn(
+              "sticky left-0 z-20 border-[var(--color-border)] border-r bg-white px-1 py-2",
+              TIME_COL_CLASS
+            )}
+          />
+          <div className="grid min-w-0 flex-1 grid-cols-7 divide-x divide-[var(--color-border)]">
+            {days.map((d) => {
+              const isToday = isSameDay(d, today);
               return (
-                <button
+                <div
+                  aria-current={isToday ? "date" : undefined}
                   className={cn(
-                    "relative h-8 border-[var(--color-border)] border-b border-l text-left text-xs transition-colors select-none",
-                    booked && "cursor-not-allowed bg-[var(--color-booked)] text-[var(--color-booked-text)]",
-                    !booked && "cursor-ns-resize bg-white hover:bg-[var(--color-accent-orange-muted)]/40",
-                    highlighted && !booked && "bg-[var(--color-accent-orange)]/25 ring-1 ring-[var(--color-accent-orange)] ring-inset"
+                    "flex flex-col items-center gap-0.5 px-1 py-2 text-center",
+                    isToday &&
+                      "rounded-md bg-[var(--color-accent-orange-muted)] ring-1 ring-[var(--color-accent-orange)]/40 ring-inset"
                   )}
-                  disabled={booked}
-                  key={`${day.toISOString()}-${slotIndex}`}
-                  onPointerDown={() => handlePointerDown(dayIndex, slotIndex, booked)}
-                  onPointerEnter={() => handlePointerEnter(dayIndex, slotIndex)}
-                  type="button"
+                  key={d.toISOString()}
                 >
-                  {booked ? (
-                    <span className="flex h-full items-center justify-center px-1 text-[10px] leading-tight">
-                      Booked
-                    </span>
-                  ) : null}
-                </button>
+                  <span
+                    className={cn(
+                      "font-medium text-xs leading-tight sm:text-sm",
+                      isToday && "text-[var(--color-accent-orange)]"
+                    )}
+                  >
+                    {new Intl.DateTimeFormat(undefined, {
+                      weekday: "long",
+                    }).format(d)}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs tabular-nums",
+                      isToday
+                        ? "text-[var(--color-accent-orange)]"
+                        : "text-[var(--color-muted-foreground)]"
+                    )}
+                  >
+                    {d.getMonth() + 1}/{d.getDate()}
+                  </span>
+                </div>
               );
             })}
           </div>
-        ))}
+        </div>
+
+        <div className="flex">
+          <div
+            className={cn(
+              "sticky left-0 z-10 flex flex-col border-[var(--color-border)] border-r bg-[var(--color-muted)]",
+              TIME_COL_CLASS
+            )}
+          >
+            {Array.from({ length: SLOT_COUNT }, (_, slotIndex) => {
+              const slotStart = getSlotBounds(days[0], slotIndex).start;
+              return (
+                <div
+                  className="flex h-8 items-center justify-center whitespace-nowrap border-[var(--color-border)] border-b px-1 text-center text-[var(--color-muted-foreground)] text-xs tabular-nums"
+                  key={slotStart.toISOString()}
+                >
+                  {formatTimeShort(slotStart)}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid min-w-0 flex-1 grid-cols-7 divide-x divide-[var(--color-border)]">
+            {days.map((day, dayIndex) => (
+              <div
+                className="flex min-w-0 flex-col bg-white"
+                key={day.toISOString()}
+              >
+                {segmentsByDay[dayIndex].map((seg) => {
+                  if (seg.type === "booked") {
+                    const slotCount = seg.endSlot - seg.startSlot + 1;
+                    const isMine =
+                      Boolean(currentUserId) &&
+                      seg.booking.bookedByUserId === currentUserId;
+                    return (
+                      <div
+                        className={cn(
+                          "flex flex-none cursor-not-allowed select-none items-center justify-center border-[var(--color-border)] border-b px-1 text-center font-medium text-xs",
+                          isMine
+                            ? "bg-[var(--color-accent-orange)] text-white"
+                            : "bg-[var(--color-booked)] text-[var(--color-booked-text)]"
+                        )}
+                        key={`b-${seg.booking.id}-${seg.startSlot}`}
+                        style={{ height: `${slotCount * SLOT_REM}rem` }}
+                      >
+                        Booked
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <Fragment
+                      key={`free-${day.toISOString()}-${seg.startSlot}`}
+                    >
+                      {Array.from(
+                        { length: seg.endSlot - seg.startSlot + 1 },
+                        (_, k) => {
+                          const slotIndex = seg.startSlot + k;
+                          const highlighted = isInHighlight(
+                            dayIndex,
+                            slotIndex
+                          );
+                          return (
+                            <button
+                              className={cn(
+                                "relative h-8 shrink-0 select-none border-[var(--color-border)] border-b border-l-0 text-left text-xs transition-colors",
+                                "cursor-ns-resize bg-white hover:bg-[var(--color-accent-orange-muted)]/40",
+                                highlighted &&
+                                  "bg-[var(--color-accent-orange)]/25 ring-1 ring-[var(--color-accent-orange)] ring-inset"
+                              )}
+                              key={`${day.toISOString()}-${slotIndex}`}
+                              onPointerDown={() =>
+                                handlePointerDown(dayIndex, slotIndex, false)
+                              }
+                              onPointerEnter={() =>
+                                handlePointerEnter(dayIndex, slotIndex)
+                              }
+                              type="button"
+                            />
+                          );
+                        }
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -2,28 +2,31 @@
 
 import {
   createContext,
+  type ReactNode,
   useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from "react";
 
-import { createSeedBookings } from "@/lib/mock-bookings";
 import type { CourtBooking } from "@/types/booking";
 
-const STORAGE_KEY = "blazin-paddles-mock-bookings";
+const STORAGE_KEY = "blazin-paddles-bookings-v2";
 
-type BookingsContextValue = {
-  bookings: CourtBooking[];
+interface BookingsContextValue {
   addBooking: (booking: Omit<CourtBooking, "id">) => CourtBooking | null;
-};
+  bookings: CourtBooking[];
+}
 
 const BookingsContext = createContext<BookingsContextValue | null>(null);
 
-export function BookingsProvider({ children }: { readonly children: ReactNode }) {
-  const [bookings, setBookings] = useState<CourtBooking[]>(() => createSeedBookings());
+export function BookingsProvider({
+  children,
+}: {
+  readonly children: ReactNode;
+}) {
+  const [bookings, setBookings] = useState<CourtBooking[]>(() => []);
 
   useEffect(() => {
     try {
@@ -46,15 +49,25 @@ export function BookingsProvider({ children }: { readonly children: ReactNode })
   const addBooking = useCallback((b: Omit<CourtBooking, "id">) => {
     const next: CourtBooking = {
       ...b,
-      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `b-${Date.now()}`,
+      id:
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `b-${Date.now()}`,
     };
     setBookings((prev) => [...prev, next]);
     return next;
   }, []);
 
-  const value = useMemo(() => ({ bookings, addBooking }), [bookings, addBooking]);
+  const value = useMemo(
+    () => ({ bookings, addBooking }),
+    [bookings, addBooking]
+  );
 
-  return <BookingsContext.Provider value={value}>{children}</BookingsContext.Provider>;
+  return (
+    <BookingsContext.Provider value={value}>
+      {children}
+    </BookingsContext.Provider>
+  );
 }
 
 export function useBookings(): BookingsContextValue {

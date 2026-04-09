@@ -16,11 +16,12 @@ export type PanelSelection = {
 
 type BookingPanelProps = {
   selection: PanelSelection | null;
+  confirmError?: string | null;
   onClose: () => void;
   onConfirm: (payload: { startIso: string; endIso: string; credits: number }) => void | Promise<void>;
 };
 
-export function BookingPanel({ selection, onClose, onConfirm }: BookingPanelProps) {
+export function BookingPanel({ selection, confirmError, onClose, onConfirm }: BookingPanelProps) {
   const { user, signInWithGoogle } = useAuth();
   const open = selection !== null;
 
@@ -92,6 +93,12 @@ export function BookingPanel({ selection, onClose, onConfirm }: BookingPanelProp
             </p>
           ) : remaining !== null && remaining < 0 ? (
             <p className="text-red-600 text-sm">Not enough credits for this selection.</p>
+          ) : null}
+
+          {confirmError ? (
+            <p className="text-red-600 text-sm" role="alert">
+              {confirmError}
+            </p>
           ) : null}
 
           <div className="mt-auto flex flex-col gap-3 pt-4">
