@@ -42,6 +42,12 @@ export const sentryConfig: Parameters<typeof withSentryConfig>[1] = {
 };
 
 export const withSentry = (sourceConfig: object): object => {
+  // Source map upload + release creation run after the Turbopack build and fail
+  // without an auth token. Skip the wrapper until Sentry is configured (e.g. Vercel integration).
+  if (!process.env.SENTRY_AUTH_TOKEN) {
+    return sourceConfig;
+  }
+
   const configWithTranspile = {
     ...sourceConfig,
     transpilePackages: ["@sentry/nextjs"],

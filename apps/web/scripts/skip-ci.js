@@ -1,5 +1,11 @@
 const { execSync } = require("node:child_process");
 
+const branch = process.env.VERCEL_GIT_COMMIT_REF ?? "";
+if (branch.startsWith("dependabot/")) {
+  console.log("Skipping Vercel build for Dependabot branch:", branch);
+  process.exit(0);
+}
+
 const commitMessage = execSync("git log -1 --pretty=%B").toString().trim();
 
 if (commitMessage.includes("[skip ci]")) {
