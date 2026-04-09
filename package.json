@@ -31,6 +31,7 @@
     "db:push": "cd packages/database && bunx prisma format && bunx prisma generate --schema=./prisma/schema.prisma && bunx prisma db push --config prisma.config.ts",
     "db:setup": "npm run db:setup --workspace=@repo/database",
     "db:verify": "npm run db:verify --workspace=@repo/database",
+    "postinstall": "npm run build --workspace=@repo/database",
     "clean": "git clean -xdf node_modules",
     "release": "npm publish"
   },

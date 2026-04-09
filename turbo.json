@@ -10,6 +10,7 @@
         ".next/**",
         "!.next/cache/**",
         "**/generated/**",
+        "dist/**",
         "storybook-static/**",
         ".react-email/**"
       ]
