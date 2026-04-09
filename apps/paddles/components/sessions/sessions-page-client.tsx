@@ -40,9 +40,9 @@ export function SessionsPageClient() {
   const upcoming = sortBookingsUpcoming(bookings).filter(
     (b) => user && b.bookedByUserId === user.id && parseISO(b.end) > new Date()
   );
-  const budget = DEFAULT_CREDITS;
-  const remain = user?.credits ?? 0;
-  const used = user ? budget - remain : 0;
+  const budget = Math.round(DEFAULT_CREDITS);
+  const remain = Math.round(user?.credits ?? 0);
+  const used = Math.round(user ? budget - remain : 0);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
