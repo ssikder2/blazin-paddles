@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState } from "react";
 import { BookingPanel } from "@/components/booking/booking-panel";
 import { TimeGrid } from "@/components/booking/time-grid";
 import { WeekStrip } from "@/components/booking/week-strip";
-import { consumeCredits } from "@/lib/profile";
+import { consumeCredits, insertBooking } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
 import { useUserTimeZone } from "@/lib/timezone";
 import { useAuth } from "@/providers/auth-provider";
@@ -53,21 +53,37 @@ export function BookingPageClient() {
       }
       setConfirmError(null);
       const supabase = createClient();
-      const result = await consumeCredits(supabase, payload.credits);
-      if (!result.ok) {
+
+      // 1. Deduct credits atomically
+      const creditResult = await consumeCredits(supabase, payload.credits);
+      if (!creditResult.ok) {
         setConfirmError(
-          result.code === "insufficient"
+          creditResult.code === "insufficient"
             ? "Not enough credits for this booking."
-            : result.message
+            : creditResult.message
         );
         return;
       }
-      addBooking({
-        start: payload.startIso,
-        end: payload.endIso,
-        bookedByUserId: user.id,
-      });
-      patchCredits(result.balance);
+
+      // 2. Persist the booking — if this fails, credits are already spent
+      //    so show an error so the user can contact support
+      const bookingResult = await insertBooking(
+        supabase,
+        user.id,
+        payload.startIso,
+        payload.endIso
+      );
+      if (!bookingResult.ok) {
+        setConfirmError(
+          `Booking could not be saved: ${bookingResult.message}. Your credits were deducted — please contact support.`
+        );
+        patchCredits(creditResult.balance);
+        return;
+      }
+
+      // 3. Update local state optimistically
+      addBooking(bookingResult.booking);
+      patchCredits(creditResult.balance);
       setPanelSelection(null);
     },
     [addBooking, patchCredits, user]

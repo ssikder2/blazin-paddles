@@ -10,13 +10,14 @@ import {
   useState,
 } from "react";
 
+import { fetchBookings } from "@/lib/profile";
+import { createClient } from "@/lib/supabase/client";
 import type { CourtBooking } from "@/types/booking";
 
-const STORAGE_KEY = "blazin-paddles-bookings-v2";
-
 interface BookingsContextValue {
-  addBooking: (booking: Omit<CourtBooking, "id">) => CourtBooking | null;
+  addBooking: (booking: CourtBooking) => void;
   bookings: CourtBooking[];
+  refreshBookings: () => Promise<void>;
 }
 
 const BookingsContext = createContext<BookingsContextValue | null>(null);
@@ -26,41 +27,36 @@ export function BookingsProvider({
 }: {
   readonly children: ReactNode;
 }) {
-  const [bookings, setBookings] = useState<CourtBooking[]>(() => []);
+  const [bookings, setBookings] = useState<CourtBooking[]>([]);
 
-  useEffect(() => {
-    try {
-      const raw = sessionStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        setBookings(JSON.parse(raw) as CourtBooking[]);
-      }
-    } catch {
-      // keep seed
-    }
+  const loadBookings = useCallback(async () => {
+    const supabase = createClient();
+    const now = new Date();
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 90); // load 90 days ahead
+
+    const data = await fetchBookings(
+      supabase,
+      weekStart.toISOString(),
+      weekEnd.toISOString()
+    );
+    setBookings(data);
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined" || bookings.length === 0) {
-      return;
-    }
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(bookings));
-  }, [bookings]);
+    loadBookings();
+  }, [loadBookings]);
 
-  const addBooking = useCallback((b: Omit<CourtBooking, "id">) => {
-    const next: CourtBooking = {
-      ...b,
-      id:
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `b-${Date.now()}`,
-    };
-    setBookings((prev) => [...prev, next]);
-    return next;
+  const addBooking = useCallback((booking: CourtBooking) => {
+    setBookings((prev) => [...prev, booking]);
   }, []);
 
   const value = useMemo(
-    () => ({ bookings, addBooking }),
-    [bookings, addBooking]
+    () => ({ bookings, addBooking, refreshBookings: loadBookings }),
+    [bookings, addBooking, loadBookings]
   );
 
   return (
