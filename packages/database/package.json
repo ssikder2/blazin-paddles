@@ -36,7 +36,7 @@
     "@repo/typescript-config": "*",
     "@types/node": "25.3.5",
     "@types/pg": "^8.15.5",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.4.1",
     "prisma": "7.4.2",
     "typescript": "^5.9.3"
   }
